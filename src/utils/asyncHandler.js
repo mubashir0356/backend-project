@@ -1,12 +1,12 @@
 // asyncHandler using Promise
 
 const asyncHandler = (regularHandler) => {
-    (req, res, next) => {
+    return (req, res, next) => {
         Promise.resolve(regularHandler(req, res, next)).catch((error) => next(error))
     }
 }
 
-export default asyncHandler
+export { asyncHandler }
 
 /* asyncHandler using async and await with try and catch 
 
