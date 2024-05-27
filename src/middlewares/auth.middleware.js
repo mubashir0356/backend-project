@@ -21,7 +21,7 @@ const verifyJWT = async (req, res, next) => {
         req.user = user // pushing user in request
         next()
     } catch (error) {
-        throw new APIError(401, error.message || "Invaled access token")
+        throw new APIError(401, error.message || "Invalid access token")
     }
 
 }

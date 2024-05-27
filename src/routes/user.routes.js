@@ -1,5 +1,15 @@
 import { Router } from "express";
-import { loginUser, logoutUser, refreshAccessToken, registerUser } from "../controllers/user.controller.js";
+import {
+    changePassword,
+    getUserDetails,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    registerUser,
+    updateAcountDetails,
+    updateAvatar,
+    updateCoverImage
+} from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -19,11 +29,17 @@ userRouter.post("/register",
         }
     ]),
     registerUser)
-
 userRouter.route("/login").post(loginUser)
 userRouter.route("/regenerateAcessztoken").post(refreshAccessToken)
 
 //secure routes
 userRouter.route("/logout").post(verifyJWT, logoutUser)
+userRouter.route("/change-password").post(verifyJWT, changePassword)
+userRouter.route("/get-user").get(verifyJWT, getUserDetails)
+userRouter.route("/update-user-details").patch(verifyJWT, updateAcountDetails)
+
+// using multiple middlewares
+userRouter.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateAvatar)
+userRouter.route("/update-cover-img").patch(verifyJWT, upload.single("coverImage"), updateCoverImage)
 
 export default userRouter

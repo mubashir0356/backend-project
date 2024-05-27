@@ -2,7 +2,7 @@ import { User } from "../models/user.model.js"
 import { APIError } from "../utils/APIError.js"
 import { APIResponse } from "../utils/APIResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
-import { uploadToCloudinary } from "../utils/cloudinary.js"
+import { uploadToCloudinary, deleteFromClodinary } from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken"
 
 // use this while setting or clearing cookies so that only server can modify cookies
@@ -198,4 +198,137 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         )
 })
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken }
+const changePassword = asyncHandler(async (req, res) => {
+    // take p/w- old and new
+    // find user
+    // compare old p/w and p/w stored in db
+    // save new p/w
+    // send res
+
+    const { oldPassword, newPassword } = req.body
+
+    if (!(oldPassword || newPassword)) {
+        throw new APIError(400, "password fields are required")
+    }
+
+    const user = await User.findById(req.user._id)
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+    if (!isPasswordCorrect) {
+        throw new APIError(400, "Old password did not match")
+    }
+
+    user.password = newPassword
+    await user.save({ validateBeforeSave: false })
+
+    return res.status(200).json(new APIResponse(200, {}, "Pasword changed successfully"))
+})
+
+const getUserDetails = asyncHandler(async (req, res) => {
+    return res.status(200)
+        .json(new APIResponse(
+            200,
+            { userDetails: req.user },
+            "User details fetched successfully"
+        ))
+})
+
+const updateAcountDetails = asyncHandler(async (req, res) => {
+    // take required fields from body
+    // find the user
+    // update the details
+    // send response
+    const { fullName, email } = req.body
+
+    if (!(fullName || email)) {
+        throw new APIError(400, "All fields are mandatory")
+    }
+
+    // returns updated user object
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                fullName,
+                email
+            }
+        },
+        {
+            new: true
+        }
+    ).select("-password -refreshToken")
+
+    return res.status(200)
+        .json(
+            new APIResponse(200, user, "User details updated successfully")
+        )
+})
+
+const updateAvatar = asyncHandler(async (req, res) => {
+    const avatarLocalPath = req.file?.path
+
+    if (!avatarLocalPath) {
+        throw new APIError(400, "Avatar file is recquired")
+    }
+    // deleting old avatar from cloudinary
+    const user = await User.findById(req.user._id)
+
+    const deleteOldAvatar = await deleteFromClodinary(user.avatar)
+
+    // console.log(deleteOldAvatar, "deleted Details")
+
+    const avatar = await uploadToCloudinary(avatarLocalPath)
+
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: { avatar: avatar.url }
+        },
+        { new: true }
+    ).select("-password")
+
+    return res.status(200).json(
+        new APIResponse(200, updatedUser, "Avatar img updated successfully")
+    )
+})
+
+const updateCoverImage = asyncHandler(async (req, res) => {
+    const coverImageLocalPath = req.file?.path
+
+    if (!coverImageLocalPath) {
+        throw new APIError(400, "Cover Image file is recquired")
+    }
+    // deleting old cover img from cloudinary
+    const user = await User.findById(req.user._id)
+
+    const deleteOldCoverImage = await deleteFromClodinary(user.coverImage)
+
+    // console.log(deleteOldAvatar, "deleted Details")
+
+    const coverImage = await uploadToCloudinary(coverImageLocalPath)
+
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: { coverImage: coverImage.url }
+        },
+        { new: true }
+    ).select("-password")
+
+    return res.status(200).json(
+        new APIResponse(200, updatedUser, "Cover Image updated successfully")
+    )
+})
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    changePassword,
+    getUserDetails,
+    updateAcountDetails,
+    updateAvatar,
+    updateCoverImage
+}

@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import fs from "fs"
+import { APIError } from './APIError.js';
 
 // Configuration
 cloudinary.config({
@@ -7,6 +8,13 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+const getPublicIdFromUrl = (url) => {
+    const urlParts = url.split("/")
+    const publicIdWithFormat = urlParts.pop()
+    const publicId = publicIdWithFormat.split(".").slice(0, -1).join(".") // removed format
+    return publicId
+}
 
 // uploading file to cloudinary server from local server
 
@@ -25,4 +33,15 @@ const uploadToCloudinary = async (localFilePath) => {
     }
 }
 
-export { uploadToCloudinary }
+const deleteFromClodinary = async (cloudinaryUrl) => {
+
+    try {
+        const publicId = getPublicIdFromUrl(cloudinaryUrl)
+        const result = await cloudinary.uploader.destroy(publicId);
+        return result
+    } catch (error) {
+        throw new APIError(500, "Something went wrong while deleting old avatar")
+    }
+}
+
+export { uploadToCloudinary, deleteFromClodinary }
