@@ -135,4 +135,25 @@ const loginUser = asyncHandler(async (req, res) => {
 
 })
 
-export { registerUser, loginUser }
+const logoutUser = asyncHandler(async (req, res) => {
+    // steps: remove refresh token in db
+    //  clear tokens pressent in cookies
+
+    const userId = req.user._id // from missleware wo got user object in request
+
+    const user = await User.findByIdAndUpdate(
+        userId,
+        { $unset: { refreshToken: 1 } },
+        { new: true }
+    )
+
+    return res.status(200)
+        .clearCookie("accessToken", cookieOptions)
+        .clearCookie("refreshToken", cookieOptions)
+        .json(
+            new APIResponse(200, {}, "User loggedout successfully")
+        )
+
+})
+
+export { registerUser, loginUser, logoutUser }
