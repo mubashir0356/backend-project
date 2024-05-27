@@ -11,7 +11,6 @@ const verifyJWT = async (req, res, next) => {
         }
 
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
-        console.log("decodedToken", decodedToken)
 
         if (!decodedToken) {
             throw new APIError(401, "Invalid access token")

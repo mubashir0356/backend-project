@@ -3,6 +3,7 @@ import { APIError } from "../utils/APIError.js"
 import { APIResponse } from "../utils/APIResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { uploadToCloudinary } from "../utils/cloudinary.js"
+import jwt from "jsonwebtoken"
 
 // use this while setting or clearing cookies so that only server can modify cookies
 
@@ -156,4 +157,45 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 })
 
-export { registerUser, loginUser, logoutUser }
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    // get incoming refreshtoken of user from cookies or body
+    // decode token - we will get _id of user from it
+    // find user with decoded token 
+    // compare stored refreshed token with incoming refreshtoken
+    // generate new tokens
+    // send new access and refresh tokens
+
+    const incomingToken = req.cookies?.refreshToken || req.body.refreshToken
+
+    if (!incomingToken) {
+        throw new APIError(401, "Unauthorized access")
+    }
+
+    const decodedToken = jwt.verify(incomingToken, process.env.REFRESH_TOKEN_SECRET)
+
+    const user = await User.findById(decodedToken?._id)
+
+    if (!user) {
+        throw new APIError(401, "Invalid refresh token")
+    }
+
+    if (incomingToken !== user.refreshToken) {
+        throw new APIError(401, "Invalid refresh token")
+    }
+
+    const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshTokens(user._id)
+
+    return res.status(200)
+        .cookie("accessToken", accessToken, cookieOptions)
+        .cookie("refreshToken", newRefreshToken, cookieOptions)
+        .json(new APIResponse(
+            200,
+            {
+                accessToken,
+                newRefreshToken
+            },
+            "Access token regenrated successfully")
+        )
+})
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken }
