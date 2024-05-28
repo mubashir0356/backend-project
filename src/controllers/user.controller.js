@@ -1,3 +1,4 @@
+import { Subscription } from "../models/subscription.model.js"
 import { User } from "../models/user.model.js"
 import { APIError } from "../utils/APIError.js"
 import { APIResponse } from "../utils/APIResponse.js"
@@ -320,6 +321,93 @@ const updateCoverImage = asyncHandler(async (req, res) => {
         new APIResponse(200, updatedUser, "Cover Image updated successfully")
     )
 })
+
+// ----------------: using aggreagations to get channel profile :---------------
+// 1st pipeline(pp)- similar o where clause
+// 2nd pp : joining with subscription model to get no of subscribers -- array of objects containing subscriber id's
+//          local field - field if user model
+//          foreign field - field if subscription model
+//          as - a new field is created
+//          (array or object is known as field) wgile querying a field "$" prefix should be added
+// 3rd pp : joining with subscription model to get no of channels the user has subscribed. -- array of objects containing channel id's
+// 4th pp : adding fields to the resultant o/p
+// 5th pp : it is similar to SELECT query in SQL to show no of fields in the resultant query
+
+const channelProfile = asyncHandler(async (req, res) => {
+    const { username } = req.params
+    if (!username) {
+        throw new APIError(400, "Username is not provided")
+    }
+
+    const channel = await User.aggregate([
+        // 1st pipeline
+        {
+            $match: { username: username?.toLowerCase() }
+        },
+        // 2nd pp
+        {
+            $lookup: {
+                from: "subscriptions", // model name will be saved in lowercase and also on plural i.e., Subscription = subscriptions
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        // 3rd pp
+        {
+            $lookup: {
+                from: "subscriptions", // model name will be saved in lowercase and also on plural i.e., Subscription = subscriptions
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscriberdTo"
+            }
+        },
+        // 4th pp
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers"
+                },
+                channelsSubscribedToCount: {
+                    $size: "$subscriberdTo"
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        // 5th pp
+        {
+            $project: {
+                fullName: 1,
+                username: 1,
+                subscribersCount: 1,
+                channelsSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+            }
+        }
+    ])
+
+    console.log(channel, "channel details")
+
+    if (!channel?.length) {
+        throw new APIError(404, "channel does not exists")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new APIResponse(200, channel[0], "User channel fetched successfully")
+        )
+})
+
 
 export {
     registerUser,
