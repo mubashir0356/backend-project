@@ -360,7 +360,7 @@ const getChannelProfile = asyncHandler(async (req, res) => {
                 from: "subscriptions", // model name will be saved in lowercase and also on plural i.e., Subscription = subscriptions
                 localField: "_id",
                 foreignField: "subscriber",
-                as: "subscriberdTo"
+                as: "subscribedTo"
             }
         },
         // 4th pp
@@ -370,7 +370,7 @@ const getChannelProfile = asyncHandler(async (req, res) => {
                     $size: "$subscribers"
                 },
                 channelsSubscribedToCount: {
-                    $size: "$subscriberdTo"
+                    $size: "$subscribedTo"
                 },
                 isSubscribed: {
                     $cond: {
@@ -422,13 +422,14 @@ const getChannelProfile = asyncHandler(async (req, res) => {
 // 5th pp : it is similar to SELECT query in SQL to show no of fields in the resultant query
 
 const getWatchHistory = asyncHandler(async (req, res) => {
+
     const user = await User.aggregate([
         {
             $match: { _id: new mongoose.Schema.Types.ObjectId(req.user?._id) }
         },
         {
             $lookup: {
-                from: "videos", // model name should be plural in lowercase
+                from: "videos", // model name should be plural & in lowercase
                 localField: "watchHistory",
                 foreignField: "_id",
                 as: "history",
@@ -436,7 +437,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                 pipeline: [
                     {
                         $lookup: {
-                            from: "users", // User model name should be plural in lowercase
+                            from: "users", // User model name should be plural & in lowercase
                             localField: "owner",
                             foreignField: "_id",
                             as: "owner",
@@ -460,7 +461,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                                 $first: "$owner"
                             }
                         }
-                    }
+                    },
                 ]
             }
         }
