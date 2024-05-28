@@ -1,7 +1,9 @@
 import { Router } from "express";
 import {
     changePassword,
+    getChannelProfile,
     getUserDetails,
+    getWatchHistory,
     loginUser,
     logoutUser,
     refreshAccessToken,
@@ -41,5 +43,8 @@ userRouter.route("/update-user-details").patch(verifyJWT, updateAcountDetails)
 // using multiple middlewares
 userRouter.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateAvatar)
 userRouter.route("/update-cover-img").patch(verifyJWT, upload.single("coverImage"), updateCoverImage)
+
+userRouter.route("/channel/:username").get(verifyJWT, getChannelProfile)
+userRouter.route("/history").get(verifyJWT, getWatchHistory)
 
 export default userRouter

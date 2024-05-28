@@ -1,3 +1,4 @@
+import mongoose from "mongoose"
 import { Subscription } from "../models/subscription.model.js"
 import { User } from "../models/user.model.js"
 import { APIError } from "../utils/APIError.js"
@@ -323,17 +324,17 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 })
 
 // ----------------: using aggreagations to get channel profile :---------------
-// 1st pipeline(pp)- similar o where clause
+// 1st pipeline(pp)- similar to WHERE clause
 // 2nd pp : joining with subscription model to get no of subscribers -- array of objects containing subscriber id's
-//          local field - field if user model
-//          foreign field - field if subscription model
+//          local field - field of user model
+//          foreign field - field of subscription model
 //          as - a new field is created
 //          (array or object is known as field) wgile querying a field "$" prefix should be added
 // 3rd pp : joining with subscription model to get no of channels the user has subscribed. -- array of objects containing channel id's
 // 4th pp : adding fields to the resultant o/p
 // 5th pp : it is similar to SELECT query in SQL to show no of fields in the resultant query
 
-const channelProfile = asyncHandler(async (req, res) => {
+const getChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params
     if (!username) {
         throw new APIError(400, "Username is not provided")
@@ -408,6 +409,70 @@ const channelProfile = asyncHandler(async (req, res) => {
         )
 })
 
+// ----------------: using aggreagations to get watch History :---------------
+// 1st pp : similar to WHERE clause
+// 2nd pp : joining with video model to get watched video list - will get array of objects(all video model if not filtered using $project)
+//          local field - field of user model - watchHistory 
+//          foreign field - field of subscription model - _id
+//          as - a new field is created
+//          (array or object is known as field) wgile querying a field "$" prefix should be added
+
+// 3rd nested pp : joining with video with user model to get owner details such as his full name etc.. -- array of objects containing channel id's
+// 4th pp : adding fields to the resultant o/p
+// 5th pp : it is similar to SELECT query in SQL to show no of fields in the resultant query
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+    const user = await User.aggregate([
+        {
+            $match: { _id: new mongoose.Schema.Types.ObjectId(req.user?._id) }
+        },
+        {
+            $lookup: {
+                from: "videos", // model name should be plural in lowercase
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "history",
+                // nested pipeline
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users", // User model name should be plural in lowercase
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            // nested pipeline to get only selected fields of user model
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            // since above nested pipeline returns an array of ssingle object with owner details in frondend 
+                            // it will be problem so selecting the 1st element of that array and storing it in owner below
+                            owner: {
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    console.log(user, "history details")
+
+    return res
+        .status(200)
+        .json(new APIResponse(200, user[0].history, "Watch history fetched successfully"))
+})
+
 
 export {
     registerUser,
@@ -418,5 +483,7 @@ export {
     getUserDetails,
     updateAcountDetails,
     updateAvatar,
-    updateCoverImage
+    updateCoverImage,
+    getChannelProfile,
+    getWatchHistory
 }
