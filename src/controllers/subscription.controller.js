@@ -50,6 +50,78 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const { channelId } = req.params
+
+    if (!isValidObjectId(channelId)) {
+        throw new APIError(400, "Channel Id is invalid")
+    }
+
+    const subscribersList = await User.aggregate([
+        {
+            $match: { _id: new mongoose.Types.ObjectId(channelId) }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "subscriber",
+                            foreignField: "_id",
+                            as: "subscriberDetails",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1,
+                                        email: 1,
+                                        coverImage: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $unwind: "$subscriberDetails"
+                    },
+                    {
+                        $project: {
+                            createdAt: 1,
+                            updatedAt: 1,
+                            subscriberDetails: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers"
+                },
+            }
+        },
+        {
+            $project: {
+                subscribers: 1,
+                subscribersCount: 1
+            }
+        }
+    ])
+
+    console.log(subscribersList, "subscribersList")
+
+    return res
+        .status(200)
+        .json(new APIResponse(
+            200,
+            subscribersList[0],
+            "Subscribers list fetched successfully"
+        ))
 })
 
 // controller to return channel list to which user has subscribed
