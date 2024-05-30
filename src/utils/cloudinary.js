@@ -52,7 +52,7 @@ const deleteFromClodinary = async (cloudinaryUrl) => {
         const result = await cloudinary.uploader.destroy(publicId);
         return result
     } catch (error) {
-        throw new APIError(500, "Something went wrong while deleting old avatar")
+        throw new APIError(500, "Something went wrong while deleting file")
     }
 }
 
