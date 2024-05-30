@@ -59,17 +59,17 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     //  accessing files using multer 
-    const avatarLocalFile = req.files?.avatar[0]?.path
-    let coverImgLocalPath
+    const avatarLocalFile = req.files?.avatar[0]
+    let coverImgLocalFile
     if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
-        coverImgLocalPath = req.files.coverImage[0].path
+        coverImgLocalFile = req.files.coverImage[0]
     }
     if (!avatarLocalFile) {
         throw new APIError(400, "Avatar file is required")
     }
 
-    const avatar = await uploadToCloudinary(avatarLocalFile)
-    const coverImage = await uploadToCloudinary(coverImgLocalPath)
+    const avatar = await uploadToCloudinary({ ...avatarLocalFile, userName: username })
+    const coverImage = await uploadToCloudinary({ ...coverImgLocalFile, userName: username })
 
     if (!avatar) {
         throw new APIError(500, "Something went wrong uploading avatar")
@@ -268,9 +268,9 @@ const updateAcountDetails = asyncHandler(async (req, res) => {
 })
 
 const updateAvatar = asyncHandler(async (req, res) => {
-    const avatarLocalPath = req.file?.path
+    const avatarLocalFile = req.file
 
-    if (!avatarLocalPath) {
+    if (!avatarLocalFile) {
         throw new APIError(400, "Avatar file is recquired")
     }
     // deleting old avatar from cloudinary
@@ -280,7 +280,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
 
     // console.log(deleteOldAvatar, "deleted Details")
 
-    const avatar = await uploadToCloudinary(avatarLocalPath)
+    const avatar = await uploadToCloudinary({ ...avatarLocalFile, userName: req.user?.username })
 
     const updatedUser = await User.findByIdAndUpdate(
         req.user._id,
@@ -296,9 +296,9 @@ const updateAvatar = asyncHandler(async (req, res) => {
 })
 
 const updateCoverImage = asyncHandler(async (req, res) => {
-    const coverImageLocalPath = req.file?.path
+    const coverImageLocalFile = req.file
 
-    if (!coverImageLocalPath) {
+    if (!coverImageLocalFile) {
         throw new APIError(400, "Cover Image file is recquired")
     }
     // deleting old cover img from cloudinary
@@ -308,7 +308,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 
     // console.log(deleteOldAvatar, "deleted Details")
 
-    const coverImage = await uploadToCloudinary(coverImageLocalPath)
+    const coverImage = await uploadToCloudinary({ ...coverImageLocalFile, userName: req.user?.username })
 
     const updatedUser = await User.findByIdAndUpdate(
         req.user._id,

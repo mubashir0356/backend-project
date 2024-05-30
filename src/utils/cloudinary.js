@@ -11,25 +11,37 @@ cloudinary.config({
 
 const getPublicIdFromUrl = (url) => {
     const urlParts = url.split("/")
-    const publicIdWithFormat = urlParts.pop()
+    const publicIdWithFormat = urlParts.splice(7, 3).join("/")
+    // console.log(publicIdWithFormat, "PIDF")
     const publicId = publicIdWithFormat.split(".").slice(0, -1).join(".") // removed format
+    // console.log(publicId, "pId")
     return publicId
 }
 
 // uploading file to cloudinary server from local server
 
-const uploadToCloudinary = async (localFilePath) => {
+const uploadToCloudinary = async (localFile) => {
     try {
-        if (!localFilePath) return null
+        if (!localFile) return null
 
-        const response = await cloudinary.uploader.upload(localFilePath, {
-            resource_type: "auto"
+        let folder = ""
+        if (localFile.mimetype.startsWith("image")) {
+            folder = `images/${localFile.userName}`
+        } else if (localFile.mimetype.startsWith("video")) {
+            folder = `videos/${localFile.userName}`
+        } else {
+            folder = `others/${localFile.userName}`
+        }
+
+        const response = await cloudinary.uploader.upload(localFile.path, {
+            resource_type: "auto",
+            folder: folder // Set the folder based on file type
         })
         // console.log("File uploaded successfully as:", response.url);
-        fs.unlinkSync(localFilePath) // removing the locally saved file as it is saved to cloudinary server
+        fs.unlinkSync(localFile.path) // removing the locally saved file as it is saved to cloudinary server
         return response
     } catch (error) {
-        fs.unlinkSync(localFilePath) // removing the locally saved file since its failed to be uploaded
+        fs.unlinkSync(localFile.path) // removing the locally saved file since its failed to be uploaded
     }
 }
 

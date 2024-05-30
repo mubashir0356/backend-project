@@ -19,22 +19,22 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new APIError(400, "Thumbnail and description are required")
     }
 
-    const userId = req?.user._id
-    const videoFileLocalPath = req.files?.videoFile[0].path
-    const thumbnailLocalPath = req.files?.thumbnail[0].path
+    const userId = req.user?._id
+    const localVideoFile = req.files?.videoFile[0]
+    const localThumbnailFile = req.files?.thumbnail[0]
 
     // console.log(req.files, "uploaded files details")
 
-    if (!videoFileLocalPath) {
+    if (!localVideoFile) {
         throw new APIError(400, "Upload a video")
     }
 
-    if (!thumbnailLocalPath) {
+    if (!localThumbnailFile) {
         throw new APIError(400, "Upload a thumbnail for the video")
     }
 
-    const video = await uploadToCloudinary(videoFileLocalPath)
-    const thumbnail = await uploadToCloudinary(thumbnailLocalPath)
+    const video = await uploadToCloudinary({ ...localVideoFile, userName: req.user?.username })
+    const thumbnail = await uploadToCloudinary({ ...localThumbnailFile, userName: req.user?.username })
 
     // console.log(video, "cloudinary video details")
 
@@ -46,7 +46,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new APIError(500, "Something went wrong while uploading the thumbnail to cloudinary")
     }
 
-    // console.table([videoFileLocalPath, thumbnailLocalPath])
+    // console.table([localVideoFile, localThumbnailFile])
     const videoDetails = await Video.create({
         videoFile: video.url,
         thumbnail: thumbnail.url,
