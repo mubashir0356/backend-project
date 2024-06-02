@@ -14,7 +14,7 @@ const getPublicIdFromUrl = (url) => {
     const publicIdWithFormat = urlParts.splice(7, 3).join("/")
     // console.log(publicIdWithFormat, "PIDF")
     const publicId = publicIdWithFormat.split(".").slice(0, -1).join(".") // removed format
-    // console.log(publicId, "pId")
+    console.log(publicId, "pId")
     return publicId
 }
 
@@ -45,11 +45,12 @@ const uploadToCloudinary = async (localFile) => {
     }
 }
 
-const deleteFromClodinary = async (cloudinaryUrl) => {
+const deleteFromClodinary = async (publicId, resourceType) => {
 
     try {
-        const publicId = getPublicIdFromUrl(cloudinaryUrl)
-        const result = await cloudinary.uploader.destroy(publicId);
+        // const publicId = getPublicIdFromUrl(cloudinaryUrl)
+        console.log(publicId, "PID")
+        const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
         return result
     } catch (error) {
         throw new APIError(500, "Something went wrong while deleting file")

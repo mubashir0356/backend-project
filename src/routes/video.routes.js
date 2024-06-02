@@ -28,7 +28,7 @@ videoRouter.route("/").post(
 
 videoRouter.route("/:videoId").get(getVideoById)
 videoRouter.route("/:videoId").delete(deleteVideo)
-videoRouter.route("/:videoId").patch(togglePublishStatus)
+videoRouter.route("/toggle/publish/:videoId").patch(togglePublishStatus)
 videoRouter.route("/:videoId").patch(upload.single("thumbnail"), updateVideo)
 
 export default videoRouter

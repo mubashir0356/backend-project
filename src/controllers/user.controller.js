@@ -80,8 +80,14 @@ const registerUser = asyncHandler(async (req, res) => {
         email,
         fullName,
         password,
-        avatar: avatar.url,
-        coverImage: coverImage.url || ""
+        avatar: {
+            url: avatar.url || "",
+            publicID: avatar.public_id || ""
+        },
+        coverImage: {
+            url: coverImage.url || "",
+            publicID: coverImage.public_id || ""
+        },
     })
 
     const createdUser = await User.findById(user._id).select("-password -refreshToken")
@@ -276,16 +282,21 @@ const updateAvatar = asyncHandler(async (req, res) => {
     // deleting old avatar from cloudinary
     const user = await User.findById(req.user._id)
 
-    const deleteOldAvatar = await deleteFromClodinary(user.avatar)
+    const deleteOldAvatar = await deleteFromClodinary(user.avatar.publicID, "image")
 
     // console.log(deleteOldAvatar, "deleted Details")
 
     const avatar = await uploadToCloudinary({ ...avatarLocalFile, userName: req.user?.username })
 
+    const updatedAvatarDetails = {
+        url: avatar.url || "",
+        publicID: avatar.public_id || ""
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: { avatar: avatar.url }
+            $set: { avatar: updatedAvatarDetails }
         },
         { new: true }
     ).select("-password")
@@ -304,16 +315,21 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     // deleting old cover img from cloudinary
     const user = await User.findById(req.user._id)
 
-    const deleteOldCoverImage = await deleteFromClodinary(user.coverImage)
+    const deleteOldCoverImage = await deleteFromClodinary(user.coverImage.publicID, "image")
 
     // console.log(deleteOldAvatar, "deleted Details")
 
     const coverImage = await uploadToCloudinary({ ...coverImageLocalFile, userName: req.user?.username })
 
+    const updatedCoverImgDetails = {
+        url: coverImage.url || "",
+        publicID: coverImage.public_id || ""
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: { coverImage: coverImage.url }
+            $set: { coverImage: updatedCoverImgDetails }
         },
         { new: true }
     ).select("-password")

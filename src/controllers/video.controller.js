@@ -36,7 +36,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const video = await uploadToCloudinary({ ...localVideoFile, userName: req.user?.username })
     const thumbnail = await uploadToCloudinary({ ...localThumbnailFile, userName: req.user?.username })
 
-    // console.log(video, "cloudinary video details")
+    console.log(video, "cloudinary video details")
 
     if (!video) {
         throw new APIError(500, "Something went wrong while uploading the video to cloudinary")
@@ -48,8 +48,14 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     // console.table([localVideoFile, localThumbnailFile])
     const videoDetails = await Video.create({
-        videoFile: video.url,
-        thumbnail: thumbnail.url,
+        videoFile: {
+            url: video.url || "",
+            publicID: video.public_id || ""
+        },
+        thumbnail: {
+            url: thumbnail.url || "",
+            publicID: thumbnail.public_id || ""
+        },
         title,
         description,
         duration: video.duration.toFixed(2),
@@ -94,6 +100,10 @@ const updateVideo = asyncHandler(async (req, res) => {
         throw new APIError(400, "Video Id is required")
     }
 
+    if (!isValidObjectId(videoId)) {
+        throw new APIError(400, "Invalid video id")
+    }
+
     const { title, description } = req.body
 
     if (!(title || description)) {
@@ -112,16 +122,21 @@ const updateVideo = asyncHandler(async (req, res) => {
 
     const video = await Video.findById(videoId)
 
-    await deleteFromClodinary(video.thumbnail)
+    await deleteFromClodinary(video.thumbnail.publicID, "image")
 
     const thumbnail = await uploadToCloudinary({ ...localThumbnailFile, userName: req.user?.username })
+
+    const updatedThumbnailDetaisl = {
+        url: thumbnail.url || "",
+        publicID: thumbnail.public_id || ""
+    }
 
     const updatedVideoDetails = await Video.findByIdAndUpdate(
         videoId,
         {
             title,
             description,
-            thumbnail: thumbnail.url
+            thumbnail: updatedThumbnailDetaisl
         },
         {
             new: true
@@ -146,9 +161,9 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
     // deleting thumbnail
 
-    const deletedThumbnailInfo = await deleteFromClodinary(video.thumbnail)
+    const deletedThumbnailInfo = await deleteFromClodinary(video.thumbnail.publicID, "image")
 
-    // console.log(deletedThumbnailInfo, "dltInfo")
+    console.log(deletedThumbnailInfo, "dltInfo")
 
     if (deletedThumbnailInfo.result !== "ok") {
         throw new APIError(500, "Error while deleting the video thumbnail from cloudinary")
@@ -156,10 +171,12 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
     // deleting video
 
-    const deletedVideoInfo = await deleteFromClodinary(video.videoFile)
+    const deletedVideoInfo = await deleteFromClodinary(video.videoFile.publicID, "video")
+
+    console.log(deletedVideoInfo, "dltinfo")
 
     if (deletedVideoInfo.result !== "ok") {
-        throw new APIError(500, "Error while deleting the video thumbnail from cloudinary")
+        throw new APIError(500, "Error while deleting the video file from cloudinary")
     }
 
     const isVideoDeleted = await Video.findByIdAndDelete(videoId)
@@ -167,7 +184,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     console.log(isVideoDeleted, "isdeleted")
 
     if (!isVideoDeleted) {
-        throw new APIError(500, "Unable to delete cideo from database")
+        throw new APIError(500, "Unable to delete video from database")
     }
 
     return res.status(200).json(new APIResponse(200, {}, "Video deleted successfully"))
