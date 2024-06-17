@@ -16,7 +16,12 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
     const videoAggregationPipelines = [
         {
-            $match: { title: { $regex: query, $options: 'i' } } // case-insensitive earch
+            $match: {
+                $or: [
+                    { title: { $regex: query, $options: 'i' } },
+                    { description: { $regex: query, $options: 'i' } }
+                ]
+            } // case-insensitive earch
         },
         {
             $lookup: {
@@ -57,6 +62,14 @@ const getAllVideos = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(new APIResponse(200, videos, "Videos fetched successfully"))
+})
+
+const getUserUploadedVideos = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 5, query = "", sortBy = "updatedAt", sortType = "asc", userId } = req.query
+
+    if (!isValidObjectId(userId)) {
+        throw new APIError(400, "Invalid user id")
+    }
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -263,5 +276,6 @@ export {
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    getUserUploadedVideos
 }
