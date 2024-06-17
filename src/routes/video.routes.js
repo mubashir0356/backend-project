@@ -3,6 +3,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import {
     deleteVideo,
+    getAllVideos,
     getVideoById,
     publishAVideo,
     togglePublishStatus,
@@ -30,5 +31,6 @@ videoRouter.route("/:videoId").get(getVideoById)
 videoRouter.route("/:videoId").delete(deleteVideo)
 videoRouter.route("/toggle/publish/:videoId").patch(togglePublishStatus)
 videoRouter.route("/:videoId").patch(upload.single("thumbnail"), updateVideo)
+videoRouter.route("/").get(getAllVideos)
 
 export default videoRouter

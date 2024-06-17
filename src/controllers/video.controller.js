@@ -6,10 +6,57 @@ import { APIResponse } from "../utils/APIResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { deleteFromClodinary, uploadToCloudinary } from "../utils/cloudinary.js"
 
+// method-1 to get all videos(diffence while using aggregate pagination method)
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
+    // const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const { page = 1, limit = 5, query = "", sortBy = "updatedAt", sortType = "asc" } = req.query
+    //TODO: get all videos present in the platform based on query, sort, pagination
+    console.log(page, limit, query, sortBy, sortType, "Query params----")
+
+    const videoAggregationPipelines = [
+        {
+            $match: { title: { $regex: query, $options: 'i' } } // case-insensitive earch
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 0,
+                            username: 1,
+                            email: 1,
+                            fullName: 1,
+                            "avatar.url": 1,
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$ownerDetails"
+        },
+        {
+            $sort: { [sortBy]: sortType === "asc" ? 1 : -1 }
+        }
+    ]
+
+    const paginationOptions = {
+        page: parseInt(page),
+        limit: parseInt(limit),
+    }
+
+    const videos = await Video.aggregatePaginate(Video.aggregate(videoAggregationPipelines), paginationOptions)
+    if (!videos) {
+        throw new APIError(500, "Something went wrong while paginating")
+    }
+    return res
+        .status(200)
+        .json(new APIResponse(200, videos, "Videos fetched successfully"))
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
