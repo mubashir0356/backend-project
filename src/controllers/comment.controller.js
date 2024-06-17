@@ -9,6 +9,49 @@ const getVideoComments = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     const { page = 1, limit = 10 } = req.query
 
+    if (!isValidObjectId(videoId)) {
+        throw new APIError(400, "Invalid video id")
+    }
+
+    console.log(page, limit, "query params :: get comments")
+
+    const pipelines = [
+        {
+            $match: { video: new mongoose.Types.ObjectId(videoId) }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "commentedBy",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 0,
+                            username: 1,
+                            email: 1,
+                            fullName: 1,
+                            "avatar.url": 1,
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+
+    const paginateOptions = {
+        page: parseInt(page),
+        limit: parseInt(limit)
+    }
+
+    const comments = await Comment.aggregatePaginate(Comment.aggregate(pipelines), paginateOptions)
+
+    if (!comments) throw new APIError(500, "Something went wrong while fetching comments")
+
+    return res
+        .status(200)
+        .json(new APIResponse(200, comments, "Comments fteched succssfully"))
 })
 
 const addComment = asyncHandler(async (req, res) => {
